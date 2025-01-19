@@ -36,13 +36,13 @@ To execute smoke and unit tests with the MPFR library, run the following Magic c
 
 - For the _round to nearest, ties to even_ mode, the default rounding mode in the IEEE 754 standard:
 
-    ```bash
+    ```
     magic run test
     ```
 
 - For all four mandated rounding modes in the IEEE 754 standard:
 
-    ```bash
+    ```
     magic run test-all
     ```
 
@@ -122,6 +122,7 @@ Below is our current roadmap, detailing completed tasks and upcoming improvement
 - [ ] Add a very simple math package just to demonstrate how we can test its functions.
 - [ ] Add a testing module with routines to compare outputs of math function implementations against MPFR, measuring error in ULP.
 - [ ] Add thread-safe routines for exhaustive tests (and, optionally, for checking known hard-to-round cases) to the testing module.
+- [ ] Add support for new platforms: `linux-aarch64` and `osx-arm64`.
 - [ ] Compile lessons learned and recommendations for math library developers in Mojo, as well as for Mojo language and standard library maintainers.
 
 ## Getting the Best Efficiency Out of MPFR
