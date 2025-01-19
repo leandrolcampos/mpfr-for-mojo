@@ -14,4 +14,5 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from ._wrapper import add, MpfrFloat, RoundingMode
+from ._ops import add, cmp_si_2exp, get_d, get_flt, set_d, set_str, sqrt
+from ._wrapper import MpfrFloat, RoundingMode

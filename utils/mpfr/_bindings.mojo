@@ -40,6 +40,7 @@ struct mpfr_t:
     var _mpfr_exp: mpfr_exp_t
     var _mpfr_d: UnsafePointer[mp_limb_t]
 
+    @always_inline("nodebug")
     fn __init__(out self):
         self._mpfr_prec = mpfr_prec_t()
         self._mpfr_sign = mpfr_sign_t()
