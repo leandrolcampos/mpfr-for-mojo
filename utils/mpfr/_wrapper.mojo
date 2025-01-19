@@ -17,9 +17,11 @@
 import math
 
 from sys.ffi import c_int, c_long
+from sys.intrinsics import unlikely
+from utils.numerics import FPUtils
 
 
-from mpfr_wrapper._bindings import (
+from mpfr._bindings import (
     mpfr_exp_t,
     mpfr_prec_t,
     mpfr_ptr,
@@ -32,36 +34,9 @@ from mpfr_wrapper._bindings import (
     mpfr_srcptr,
     mpfr_t,
 )
-from mpfr_wrapper._library import MpfrLibrary, MpfrLibraryProvider
-
-
-@value
-@register_passable("trivial")
-struct RoundingMode:
-    var _value: Int
-
-    alias AWAY_FROM_ZERO = RoundingMode(-1)
-    alias TOWARD_ZERO = RoundingMode(0)
-    alias TO_NEAREST = RoundingMode(1)
-    alias UPWARD = RoundingMode(2)
-    alias DOWNWARD = RoundingMode(3)
-    alias TO_NEAREST_AWAY = RoundingMode(4)
-
-    @always_inline("nodebug")
-    fn __eq__(self, other: RoundingMode) -> Bool:
-        return self._value == other._value
-
-    @always_inline("nodebug")
-    fn __ne__(self, other: RoundingMode) -> Bool:
-        return self._value != other._value
-
-    @always_inline("nodebug")
-    fn __is__(self, other: RoundingMode) -> Bool:
-        return self == other
-
-    @always_inline("nodebug")
-    fn __isnot__(self, other: RoundingMode) -> Bool:
-        return self != other
+from mpfr._library import MpfrLibrary, MpfrLibraryProvider
+from mpfr._ops import cmp_si_2exp, get_flt, set_str
+from rounding import RoundingMode
 
 
 fn _get_mpfr_rounding_mode[mode: RoundingMode]() -> mpfr_rnd_t:
@@ -100,13 +75,14 @@ fn _mpfr_float_construction_checks[type: DType]():
 struct MpfrFloat[
     type: DType,
     rounding_mode: RoundingMode = RoundingMode.TO_NEAREST,
-]:
+](Defaultable, ExplicitlyCopyable):
     alias _precision = _get_mpfr_precision[type]()
     alias _mpfr_rounding_mode = _get_mpfr_rounding_mode[rounding_mode]()
 
     var _lib: MpfrLibrary
     var _value: mpfr_t
 
+    @always_inline("nodebug")
     fn __init__(out self):
         _mpfr_float_construction_checks[type]()
 
@@ -117,20 +93,33 @@ struct MpfrFloat[
             Self._precision,
         )
 
+    @always_inline("nodebug")
     fn __init__(out self, value: Scalar[type]):
         self = Self()
         self[] = value
 
-    fn __init__(out self, existing: Self):
+    @always_inline("nodebug")
+    fn __init__(out self, value: StringLiteral, base: c_int = 0):
         self = Self()
-        self._lib.call["mpfr_set"](
-            self._as_mutable_ptr(),
-            existing._as_immutable_ptr(),
-            Self._mpfr_rounding_mode,
-        )
+        _ = set_str(self, value, base)
 
+    @always_inline("nodebug")
+    fn __init__(out self, value: String, base: c_int = 0):
+        self = Self()
+        _ = set_str(self, value, base)
+
+    @always_inline("nodebug")
     fn __del__(owned self):
         self._lib.call["mpfr_clear"](self._as_mutable_ptr())
+
+    @always_inline("nodebug")
+    fn copy(self, out result: Self):
+        result = Self()
+        result._lib.call["mpfr_set"](
+            result._as_mutable_ptr(),
+            self._as_immutable_ptr(),
+            Self._mpfr_rounding_mode,
+        )
 
     @always_inline("nodebug")
     fn __setitem__(mut self, value: Scalar[type]):
@@ -154,7 +143,7 @@ struct MpfrFloat[
                 Self._mpfr_rounding_mode,
             )
 
-    @always_inline("nodebug")
+    @always_inline
     fn __getitem__(self) -> Scalar[type]:
         @parameter
         if type is DType.float64:
@@ -162,16 +151,13 @@ struct MpfrFloat[
                 self._as_immutable_ptr(),
                 Self._mpfr_rounding_mode,
             )
-        else:
-            # TODO: Add support for other floating point types
-            # without double-rounding errors.
-            constrained[
-                type is DType.float32, "unsupported floating point type"
-            ]()
+        elif type is DType.float32:
             return self._lib.call["mpfr_get_flt", Scalar[type]](
                 self._as_immutable_ptr(),
                 Self._mpfr_rounding_mode,
             )
+        else:
+            return _get_value(self).cast[type]()
 
     @always_inline("nodebug")
     fn get_exponent(self) -> mpfr_exp_t:
@@ -217,23 +203,77 @@ struct MpfrFloatPtr[type: DType, rounding_mode: RoundingMode]:
     var _value: mpfr_ptr
 
     @implicit
-    @always_inline
+    @always_inline("nodebug")
     fn __init__(out self, mut src: MpfrFloat[type, rounding_mode]):
         self._lib = src._lib
         self._value = src._as_mutable_ptr()
 
 
 @always_inline("nodebug")
-fn add[
-    type: DType, rounding_mode: RoundingMode, //
-](
-    rop: MpfrFloatPtr[type, rounding_mode],
-    op1: MpfrFloat[type, rounding_mode],
-    op2: __type_of(op1),
-) -> c_int:
-    return rop._lib.call["mpfr_add", c_int](
-        rop._value,
-        op1._as_immutable_ptr(),
-        op2._as_immutable_ptr(),
-        op1._mpfr_rounding_mode,
-    )
+fn _eval[T: AnyType, //, val: T]() -> T:
+    return val
+
+
+@always_inline
+fn _get_value(src: MpfrFloat) -> Float32:
+    alias INF = math.inf[DType.float32]()
+    alias ONE = Scalar[DType.float32](1.0)
+    alias PREC = FPUtils[src.type].mantissa_width() + 1  # 24
+    alias EMAX = FPUtils[src.type].max_exponent() - 1  # 127
+    alias EMIN_NORMAL = 1 - EMAX  # -126
+    alias EMIN_SUBNORMAL = EMIN_NORMAL + 1 - PREC  # -149
+    alias EPSILON = math.ldexp(ONE, -PREC + 1)
+    alias EPSILON_NEG = math.ldexp(ONE, -PREC)
+    alias SMALLEST_SUBNORMAL = EPSILON * math.ldexp(ONE, EMIN_NORMAL)
+    alias MAX_FINITE = math.ldexp(2.0 * (1.0 - EPSILON_NEG), EMAX)
+
+    if unlikely(src.is_singular()):
+        return get_flt(src)
+
+    var mpfr_rounding_mode = src._mpfr_rounding_mode
+    var exponent = src.get_exponent()
+    var is_negative = src.get_sign() < 0
+    var result: Float32
+
+    if unlikely(mpfr_rounding_mode == MPFR_RNDA):
+        mpfr_rounding_mode = MPFR_RNDD if is_negative else MPFR_RNDU
+
+    if unlikely(exponent <= EMIN_SUBNORMAL):
+        result = is_negative.select(
+            (
+                (mpfr_rounding_mode == MPFR_RNDD)
+                | (
+                    (mpfr_rounding_mode == MPFR_RNDN)
+                    & (cmp_si_2exp(src, -1, _eval[EMIN_SUBNORMAL - 1]()) < 0)
+                )
+            ).select(-SMALLEST_SUBNORMAL, -0.0),
+            (
+                (mpfr_rounding_mode == MPFR_RNDU)
+                | (
+                    (mpfr_rounding_mode == MPFR_RNDN)
+                    & (cmp_si_2exp(src, 1, _eval[EMIN_SUBNORMAL - 1]()) > 0)
+                )
+            ).select(SMALLEST_SUBNORMAL, 0.0),
+        )
+    elif unlikely(exponent > _eval[EMAX + 1]()):
+        result = is_negative.select(
+            (
+                (mpfr_rounding_mode == MPFR_RNDZ)
+                | (mpfr_rounding_mode == MPFR_RNDU)
+            ).select(-MAX_FINITE, -INF),
+            (
+                (mpfr_rounding_mode == MPFR_RNDZ)
+                | (mpfr_rounding_mode == MPFR_RNDD)
+            ).select(MAX_FINITE, INF),
+        )
+    else:
+        var tmp = src.copy()
+        var prec = PREC + (exponent <= EMIN_NORMAL).select(
+            -(EMIN_NORMAL + 1) + exponent, 0
+        )
+        tmp._lib.call["mpfr_prec_round"](
+            tmp._as_mutable_ptr(), prec, mpfr_rounding_mode
+        )
+        result = get_flt(tmp)
+
+    return result

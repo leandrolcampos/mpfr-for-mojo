@@ -14,25 +14,20 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from testing import assert_equal, assert_true
+from testing import assert_equal
 
-from mpfr_wrapper import add, MpfrFloat, RoundingMode
-from mpfr_wrapper._library import MpfrLibrary
-
-
-fn test_version() raises:
-    var lib = MpfrLibrary()
-    var version = lib.get_version()
-
-    assert_true(
-        version.major() == 4 and version.minor() == 2,
-        "The MPFR version should be 4.2.x; got " + str(version),
-    )
+from rounding import (
+    available_rounding_modes,
+    quick_get_rounding_mode,
+    RoundingContext,
+)
 
 
-fn test_add() raises:
-    var a = MpfrFloat[DType.float32](1.0)
-    var b = MpfrFloat[DType.float32](3.0)
-    _ = add(a, a, b)
+fn test_rounding_modes() raises:
+    alias ROUNDING_MODES = available_rounding_modes()
 
-    assert_equal(a[], 4.0)
+    for i in range(len(ROUNDING_MODES)):
+        var rounding_mode = ROUNDING_MODES[i]
+
+        with RoundingContext(rounding_mode):
+            assert_equal(rounding_mode, quick_get_rounding_mode())

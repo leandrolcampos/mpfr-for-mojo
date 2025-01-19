@@ -18,8 +18,8 @@ from collections import InlineArray
 from memory import UnsafePointer
 from os import getenv
 from pathlib import Path
-from sys.ffi import _Global, c_char, DLHandle
-from sys.info import os_is_linux, os_is_macos
+from sys import DLHandle, os_is_linux, os_is_macos
+from sys.ffi import _Global, c_char
 from utils import StringRef
 
 
@@ -41,13 +41,13 @@ struct MpfrVersion(Stringable, Writable):
         Args:
             version: A string representing the MPFR version (e.g., "4.2.1").
         """
-        var splits: List[StringRef]
+        var splits: List[String]
         var components = InlineArray[Int, 3](-1)
 
         try:
-            splits = version.split(".")
+            splits = String(version).split(".")
         except:
-            splits = List[StringRef]()
+            splits = List[String]()
 
         for i in range(min(3, len(splits))):
             try:
