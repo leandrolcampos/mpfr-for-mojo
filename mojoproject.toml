@@ -5,14 +5,15 @@ authors = [
 channels = ["conda-forge", "https://conda.modular.com/max-nightly"]
 description = "MPFR-based testing for Mojo 🔥"
 name = "mpfr-for-mojo"
-platforms = ["linux-64", "linux-aarch64", "osx-arm64"]
+platforms = ["linux-64"]
 version = "0.1.0"
 
 [dependencies]
-max = "==25.1.0.dev2024121405"
+max = "==25.1.0.dev2025011405"
 
 [feature.test.tasks]
 test = { cmd = "mojo test -I utils test", env = { MPFR_LIBRARY_DIR = "$CONDA_PREFIX/lib" } }
+test-all = { cmd = "mojo test -O0 -I utils -D ALL_ROUNDING_MODES test", env = { MPFR_LIBRARY_DIR = "$CONDA_PREFIX/lib" } }
 
 [feature.test.dependencies]
 mpfr = ">=4.2,<4.3"
