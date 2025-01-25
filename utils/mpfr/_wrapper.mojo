@@ -64,11 +64,11 @@ fn _get_mpfr_precision[type: DType]() -> mpfr_prec_t:
 
 fn _mpfr_float_construction_checks[type: DType]():
     constrained[
-        type.is_floating_point(), "type must be a floating point type"
+        type.is_floating_point(), "type must be a floating-point type"
     ]()
     constrained[
         type in [DType.bfloat16, DType.float16, DType.float32, DType.float64],
-        "unsupported floating point type",
+        "unsupported floating-point type",
     ]()
 
 
@@ -218,10 +218,10 @@ fn _eval[T: AnyType, //, val: T]() -> T:
 fn _get_value(src: MpfrFloat) -> Float32:
     alias INF = math.inf[DType.float32]()
     alias ONE = Scalar[DType.float32](1.0)
-    alias PREC = FPUtils[src.type].mantissa_width() + 1  # 24
-    alias EMAX = FPUtils[src.type].max_exponent() - 1  # 127
-    alias EMIN_NORMAL = 1 - EMAX  # -126
-    alias EMIN_SUBNORMAL = EMIN_NORMAL + 1 - PREC  # -149
+    alias PREC = FPUtils[src.type].mantissa_width() + 1
+    alias EMAX = FPUtils[src.type].max_exponent() - 1
+    alias EMIN_NORMAL = 1 - EMAX
+    alias EMIN_SUBNORMAL = EMIN_NORMAL + 1 - PREC
     alias EPSILON = math.ldexp(ONE, -PREC + 1)
     alias EPSILON_NEG = math.ldexp(ONE, -PREC)
     alias SMALLEST_SUBNORMAL = EPSILON * math.ldexp(ONE, EMIN_NORMAL)

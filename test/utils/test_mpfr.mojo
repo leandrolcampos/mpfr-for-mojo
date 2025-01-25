@@ -23,6 +23,7 @@ from utils.numerics import FPUtils
 
 import mpfr
 
+from float_types import available_half_float_types
 from mpfr import MpfrFloat
 from mpfr._library import MpfrLibrary
 from rounding import (
@@ -168,17 +169,7 @@ fn _append_in_range_values[
 
 
 fn _test_get_value[rounding_mode: RoundingMode]() raises:
-    @parameter
-    fn _get_supported_types() -> List[DType, hint_trivial_type=True]:
-        var result = List[DType, hint_trivial_type=True](DType.float16)
-
-        @parameter
-        if not has_neon():
-            result.append(DType.bfloat16)
-
-        return result
-
-    alias FLOAT_TYPES = _get_supported_types()
+    alias FLOAT_TYPES = available_half_float_types()
 
     @parameter
     for i in range(len(FLOAT_TYPES)):
