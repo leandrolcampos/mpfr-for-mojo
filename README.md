@@ -3,7 +3,7 @@
 
 # MPFR for Mojo 🔥
 
-This project is a proof of concept (PoC) that demonstrates how we can use the [MPFR](https://www.mpfr.org/) library as a "gold standard" to test the correctness of mathematical functions implemented in [Mojo](https://www.modular.com/mojo).
+This project is a proof of concept (PoC) that shows how we can use the [GNU MPFR](https://www.mpfr.org/) library as a "gold standard" to test the correctness of mathematical functions implemented in [Mojo](https://www.modular.com/mojo).
 
 MPFR is an efficient C library for multiple-precision floating-point computations with _correct rounding_. It is used to test numerical routines in projects such as [CORE-MATH](https://core-math.gitlabpages.inria.fr/), [LLVM-libc](https://libc.llvm.org/index.html), and [RLIBM](https://people.cs.rutgers.edu/~sn349/rlibm/).
 
@@ -22,7 +22,7 @@ By comparing the outputs of our custom Mojo functions with MPFR, we can ensure o
 
 ## Getting Started
 
-First install [Magic](https://docs.modular.com/magic/#install-magic), a package manager and virtual environment manager for any language, including Python and Mojo.
+First install [Magic](https://docs.modular.com/magic/#install-magic), a package manager and virtual environment manager for Mojo and other languages.
 
 Then clone this repository:
 
@@ -32,7 +32,7 @@ git clone https://github.com/leandrolcampos/mpfr-for-mojo.git
 
 ## Running
 
-To execute smoke and unit tests with the MPFR library, run the following Magic commands.
+To execute smoke and unit tests with the GNU MPFR library, run the following Magic commands.
 
 - For the _round to nearest, ties to even_ mode, the default rounding mode in the IEEE 754 standard:
 
@@ -57,7 +57,7 @@ This section highlights key components of the PoC, including how we handle lower
 
 Out of the box, we can set an MPFR value from or convert it to a `float32` or `float64` value. But in Mojo, which is being designed mainly for AI workloads, other floating-point types can be equally or even more important, depending on the scenario.
 
-That's the reason this PoC demonstrates how we can extend the MPFR library to work with `float16` and `bfloat16`.
+That's the reason this PoC demonstrates how we can extend the GNU MPFR library to work with `float16` and `bfloat16`.
 
 Setting an MPFR value from a `float16` or `bfloat16` is trivial. In fact, any value in these floating-point types is representable in `float32`, which allows us to promote it to the latter type without data loss and then call `mpfr_set_flt`.
 
@@ -73,14 +73,14 @@ fn double_rounding_error():
     # In the round-to-nearest-ties-to-even mode, `x` casted to bfloat16 rounds
     # up to 1.0078125, since `x` is above that midpoint.
 
-    var x_f32_bf16 = BFloat16(mpfr.get_flt(x))
+    var x_fp32_bf16 = BFloat16(mpfr.get_flt(x))
     # But in the same rounding mode, `x` casted to float32 rounds down exactly
     # to the midpoint, because `x` is too close to that number - less than half
     # of the distance between the midpoint and the next representable value in
     # float32. By "ties to even", `BFloat16(1.00390625)` rounds down to 1.0.
 
     print("The value `x` correctly rounded to bfloat16:", x_bf16)  # 1.0078125
-    print("The value `x` double-rounded to bfloat16:", x_f32_bf16)  # 1.0
+    print("The value `x` double-rounded to bfloat16:", x_fp32_bf16)  # 1.0
 ```
 
 In the example above, note that the expression `val[]` calls the `__getitem__` dunder method of our `MpfrFloat` object. Under the hood, this method uses a custom, generic conversion pipeline implemented within this project that avoids the double rounding error.
@@ -115,11 +115,11 @@ Meanwhile, the `quick_get_rounding_mode` function infers the effective rounding 
 
 Below is our current roadmap, detailing completed tasks and upcoming improvements. By outlining these steps, we aim to give a clear picture of the project’s trajectory and invite feedback from the community.
 
-- [x] Implement a wrapper for the MPFR library.
+- [x] Implement a wrapper for the GNU MPFR library.
 - [x] Add MPFR as a dependency only in the environment used for testing tasks.
 - [x] Add support for correctness testing under different rounding modes.
 - [x] Implement a pipeline that converts MPFR values to lower-precision floating-point types avoiding double rounding errors.
-- [ ] Add a very simple math package just to demonstrate how we can test its functions.
+- [x] Add a very simple math package just to demonstrate how we can test its functions.
 - [ ] Add a testing module with routines to compare outputs of math function implementations against MPFR, measuring error in ULP.
 - [ ] Add thread-safe routines for exhaustive tests (and, optionally, for checking known hard-to-round cases) to the testing module.
 - [ ] Add support for new platforms: `linux-aarch64` and `osx-arm64`.
