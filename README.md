@@ -16,9 +16,11 @@ By comparing the outputs of our custom Mojo functions with MPFR, we can ensure o
 - [Exploring the Project](#exploring-the-project)
   * [Lower-Precision Floating-Point Types](#lower-precision-floating-point-types)
   * [Rounding Modes](#rounding-modes)
+  * [Error Measure](#error-measure)
   * [Roadmap](#roadmap)
 - [Getting the Best Efficiency Out of MPFR](#getting-the-best-efficiency-out-of-mpfr)
 - [License](#license)
+- [References](#references)
 
 ## Getting Started
 
@@ -34,7 +36,7 @@ git clone https://github.com/leandrolcampos/mpfr-for-mojo.git
 
 To execute smoke and unit tests with the GNU MPFR library, run the following Magic commands.
 
-- For the _round to nearest, ties to even_ mode, the default rounding mode in the IEEE 754 standard:
+- For the _round-to-nearest-ties-to-even_ mode, the default rounding mode in the IEEE 754 standard:
 
     ```
     magic run test
@@ -66,8 +68,8 @@ But converting an MPFR value to a narrower type through the `float32` pathway ca
 ```mojo
 fn double_rounding_error():
     var x = MpfrFloat[DType.bfloat16]("1.0039063")
-    # This value is slightly above the midpoint 1.0 and the next representable
-    # bfloat16 value, 1.0 + 2**−7 = 1.0078125. The midpoint is 1.00390625.
+    # This value is slightly above the midpoint between 1.0 and the next
+    # representable bfloat16 value, 1.0078125. The midpoint is 1.00390625.
 
     var x_bf16: BFloat16 = x[]
     # In the round-to-nearest-ties-to-even mode, `x` casted to bfloat16 rounds
@@ -111,6 +113,24 @@ The `RoundingContext` struct is responsible for temporarily changing the floatin
 
 Meanwhile, the `quick_get_rounding_mode` function infers the effective rounding mode by performing volatile loading and simple floating-point arithmetic operations. This lightweight approach doesn’t rely on directly reading the current rounding mode from the floating-point environment. It can be particularly helpful for floating-point types, such as `bfloat16`, which are not part of the IEEE 754 standard and therefore may not honor the floating-point environment settings.
 
+### Error Measure
+
+In this PoC, we measure errors in terms of _units in the last place (ulp)_, a metric that denotes the magnitude of the last significand digit of a value in the target floating-point format and is widely used for expressing errors of atomic functions such as arithmetic operations, elementary functions, and inner products [[3](#muller2018)]. We adopt the Goldberg definition of $\text{ulp}(x)$ extended to all reals $x$, which states that if $|x| \in [\beta^{e}, \beta^{e+1})$ for some integer $e$, then
+
+$$
+\text{ulp}(x) = \beta^{\text{max}(e, e_{\text{min}}) - p + 1} ,
+$$
+
+where $\beta$ is the radix (often 2), $p$ is the precision, and $e_{\text{min}}$ is the minimum exponent of the target format. The choice of this definition is due to its popularity [[3](#muller2018)]. In addition, under this definition, rounding to nearest implies a maximal error of 0.5 ulp [[4](#muller2016)]. But notice that the converse is not necessarily true. More precisely, we have [[2](#gladman2024)][[4](#muller2016)]
+- For any radix $\beta$, if $X$ is a floating-point number in the target format, then $X = \text{RN}(x) \implies |X - x| \le \frac{1}{2} \text{ulp}(x)$, where $\text{RN}(\cdot)$ is a rounding-to-nearest function.
+- If $\beta = 2$ then $|X - x| < \frac{1}{2} \text{ulp}(x) \implies X = \text{RN}(x)$.
+
+For each function, assuming $y$ is the value returned by the function and $z$ the exact result (approximated with the GNU MPFR library using a larger precision than the target one), we use the following formula to compute the ulp error [[1](#brisebarre2024)]:
+
+$$
+\text{error}_{\text{ulp}}(y, z) = \frac{|y - z|}{\text{ulp}(z)}.
+$$
+
 ### Roadmap
 
 Below is our current roadmap, detailing completed tasks and upcoming improvements. By outlining these steps, we aim to give a clear picture of the project’s trajectory and invite feedback from the community.
@@ -137,4 +157,14 @@ To get the best efficiency out of MPFR, we take into consideration and sometimes
 
 ## License
 
-This project is licensed under the [Apache License 2.0](LICENSE). 
+This project is licensed under the [Apache License 2.0](LICENSE).
+
+## References
+
+[<a id="brisebarre2024">1</a>] Nicolas Brisebarre, Guillaume Hanrot, Jean-Michel Muller, Paul Zimmermann. 2024. Correctly-rounded evaluation of a function: why, how, and at what cost? [[Link](https://hal.science/hal-04474530v1)]
+
+[<a id="gladman2024">2</a>] Brian Gladman, Vincenzo Innocente, John Mather, Paul Zimmermann. 2024. Accuracy of mathematical functions in single, double, double extended, and quadruple precision. [[Link](https://inria.hal.science/hal-03141101v7)]
+
+[<a id="muller2018">3</a>] Jean-Michel Muller, Nicolas Brunie, Florent de Dinechin, Claude-Pierre Jeannerod, Mioara Joldes, Vincent Lefèvre, Guillaume Melquiond, Nathalie Revol, and Serge Torres. 2018. Handbook of floating-point arithmetic. Springer International Publishing. [[Link](https://doi.org/10.1007/978-3-319-76526-6)]
+
+[<a id="muller2016">4</a>] Jean-Michel Muller. 2016. Elementary functions. Birkhäuser Boston. [[Link](https://doi.org/10.1007/978-1-4899-7983-4)]
