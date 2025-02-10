@@ -215,3 +215,152 @@ fn test_get_value() raises:
     @parameter
     for i in range(len(ROUNDING_MODES)):
         _test_get_value[ROUNDING_MODES[i]]()
+
+
+fn _get_expected_values() -> List[Float64, hint_trivial_type=True]:
+    alias FP32_EMAX = FPUtils[DType.float32].max_exponent() - 1
+    alias FP32_PREC = FPUtils[DType.float32].mantissa_width() + 1
+
+    return List[Float64, hint_trivial_type=True](
+        math.nan[DType.float64](),
+        Float64.MIN,  # -inf
+        Float64.MAX,  # +inf
+        math.ldexp(-1.0, FP32_EMAX + 1),  # -huge
+        math.ldexp(+1.0, FP32_EMAX + 1),  # +huge
+        1.0 + math.ldexp(1.0, -FP32_PREC),
+    )
+
+
+fn _get_actual_values() -> List[Float32, hint_trivial_type=True]:
+    alias FP32_PREC = FPUtils[DType.float32].mantissa_width() + 1
+
+    return List[Float32, hint_trivial_type=True](
+        math.nan[DType.float32](),
+        Float32.MIN,  # -inf
+        Float32.MAX,  # +inf
+        1.0 + math.ldexp(Scalar[DType.float32](1.0), 1 - FP32_PREC),
+    )
+
+
+fn _test_ulp_error[rounding_mode: RoundingMode]() raises:
+    alias ERROR_MESSAGE = (
+        "incorrect ULP error for ('"
+        + str(rounding_mode)
+        + "', '"
+        + str(DType.float32)
+        + "')"
+    )
+
+    var expected_values = _get_expected_values()
+    var actual_values = _get_actual_values()
+
+    var expected = MpfrFloat[DType.float32, rounding_mode]()
+    var output = __type_of(expected)()
+
+    for i in range(len(expected_values)):
+        for j in range(len(actual_values)):
+            _ = mpfr.set_d(expected, expected_values[i])
+            var actual = actual_values[j]
+
+            mpfr.ulp_error(output, expected, actual)
+            assert_true(
+                mpfr.cmp_d(expected, expected_values[i]) == 0,
+                msg="The `expected` variable was mutated.",
+            )
+
+            if expected.is_nan() and math.isnan(actual):
+                assert_equal(output[], 0.0, ERROR_MESSAGE)
+            elif expected.is_nan() or math.isnan(actual):
+                assert_equal(output[], Float32.MAX, ERROR_MESSAGE)
+            elif expected.is_inf() or math.isinf(actual):
+                assert_equal(
+                    output[],
+                    0.0 if expected[] == actual else Float32.MAX,
+                    ERROR_MESSAGE,
+                )
+            elif expected < Float32.MIN_FINITE:
+                # output = abs(-huge - actual) / ulp(-huge)
+                # ulp(-huge) = 2**(128 - 24 + 1)
+                @parameter
+                if rounding_mode is RoundingMode.UPWARD:
+                    assert_equal(output[], 8388609, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], 8388608, ERROR_MESSAGE)
+            elif expected > Float32.MAX_FINITE:
+                # output = abs(+huge - actual) / ulp(+huge)
+                # ulp(+huge) = 2**(128 - 24 + 1)
+                @parameter
+                if rounding_mode in [
+                    RoundingMode.TO_NEAREST,
+                    RoundingMode.UPWARD,
+                ]:
+                    assert_equal(output[], 8388608, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], 8388607.5, ERROR_MESSAGE)
+            else:
+                assert_equal(output[], 0.5, ERROR_MESSAGE)
+
+
+fn _test_ulp_error_with_aliasing[rounding_mode: RoundingMode]() raises:
+    alias ERROR_MESSAGE = (
+        "incorrect ULP error for ('"
+        + str(rounding_mode)
+        + "', '"
+        + str(DType.float32)
+        + "')"
+    )
+
+    var expected_values = _get_expected_values()
+    var actual_values = _get_actual_values()
+
+    var expected = MpfrFloat[DType.float32, rounding_mode]()
+    var output = __type_of(expected)()
+
+    for i in range(len(expected_values)):
+        for j in range(len(actual_values)):
+            _ = mpfr.set_d(output, expected_values[i])
+            _ = mpfr.set_d(expected, expected_values[i])
+            var actual = actual_values[j]
+
+            mpfr.ulp_error(output, output, actual)
+
+            if expected.is_nan() and math.isnan(actual):
+                assert_equal(output[], 0.0, ERROR_MESSAGE)
+            elif expected.is_nan() or math.isnan(actual):
+                assert_equal(output[], Float32.MAX, ERROR_MESSAGE)
+            elif expected.is_inf() or math.isinf(actual):
+                assert_equal(
+                    output[],
+                    0.0 if expected[] == actual else Float32.MAX,
+                    ERROR_MESSAGE,
+                )
+            elif expected < Float32.MIN_FINITE:
+                # output = abs(-huge - actual) / ulp(-huge)
+                # ulp(-huge) = 2**(128 - 24 + 1)
+                @parameter
+                if rounding_mode is RoundingMode.UPWARD:
+                    assert_equal(output[], 8388609, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], 8388608, ERROR_MESSAGE)
+            elif expected > Float32.MAX_FINITE:
+                # output = abs(+huge - actual) / ulp(+huge)
+                # ulp(+huge) = 2**(128 - 24 + 1)
+                @parameter
+                if rounding_mode in [
+                    RoundingMode.TO_NEAREST,
+                    RoundingMode.UPWARD,
+                ]:
+                    assert_equal(output[], 8388608, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], 8388607.5, ERROR_MESSAGE)
+            else:
+                assert_equal(output[], 0.5, ERROR_MESSAGE)
+
+
+fn test_ulp_error() raises:
+    alias ROUNDING_MODES = available_rounding_modes()
+
+    @parameter
+    for i in range(len(ROUNDING_MODES)):
+        _test_ulp_error[ROUNDING_MODES[i]]()
+        _test_ulp_error_with_aliasing[ROUNDING_MODES[i]]()

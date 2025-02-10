@@ -14,5 +14,20 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from ._ops import add, cmp_si_2exp, get_d, get_flt, set_d, set_str, sqrt
-from ._wrapper import MpfrFloat, RoundingMode
+from ._ops import (
+    add,
+    cmp,
+    cmp_d,
+    cmp_si_2exp,
+    get_d,
+    get_flt,
+    set_d,
+    set_flt,
+    set_inf,
+    set_nan,
+    set_str,
+    set_zero,
+    sqrt,
+    ulp_error,
+)
+from ._wrapper import get_mpfr_rounding_mode, MpfrFloat, MpfrFloatPtr
