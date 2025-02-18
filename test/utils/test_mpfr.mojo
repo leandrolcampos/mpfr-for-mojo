@@ -228,6 +228,7 @@ fn _get_expected_values() -> List[Float64, hint_trivial_type=True]:
         math.ldexp(-1.0, FP32_EMAX + 1),  # -huge
         math.ldexp(+1.0, FP32_EMAX + 1),  # +huge
         1.0 + math.ldexp(1.0, -FP32_PREC),
+        0.0,
     )
 
 
@@ -297,6 +298,18 @@ fn _test_ulp_error[rounding_mode: RoundingMode]() raises:
                     assert_equal(output[], 8388608, ERROR_MESSAGE)
                 else:
                     assert_equal(output[], 8388607.5, ERROR_MESSAGE)
+            elif expected.is_zero():
+                # output = abs(0 - actual) / ulp(0)
+                # actual > 1
+                # ulp(0) = 2**(-126 - 24 + 1) < 2**(-(EMAX := 127))
+                @parameter
+                if rounding_mode in [
+                    RoundingMode.TOWARD_ZERO,
+                    RoundingMode.DOWNWARD,
+                ]:
+                    assert_equal(output[], Float32.MAX_FINITE, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], Float32.MAX, ERROR_MESSAGE)
             else:
                 assert_equal(output[], 0.5, ERROR_MESSAGE)
 
@@ -353,6 +366,18 @@ fn _test_ulp_error_with_aliasing[rounding_mode: RoundingMode]() raises:
                     assert_equal(output[], 8388608, ERROR_MESSAGE)
                 else:
                     assert_equal(output[], 8388607.5, ERROR_MESSAGE)
+            elif expected.is_zero():
+                # output = abs(0 - actual) / ulp(0)
+                # actual > 1
+                # ulp(0) = 2**(-126 - 24 + 1) < 2**(-(EMAX := 127))
+                @parameter
+                if rounding_mode in [
+                    RoundingMode.TOWARD_ZERO,
+                    RoundingMode.DOWNWARD,
+                ]:
+                    assert_equal(output[], Float32.MAX_FINITE, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], Float32.MAX, ERROR_MESSAGE)
             else:
                 assert_equal(output[], 0.5, ERROR_MESSAGE)
 
