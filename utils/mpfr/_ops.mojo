@@ -192,14 +192,24 @@ fn cmp_si_2exp(op1: MpfrFloat, op2: c_long, e: mpfr_exp_t) -> c_int:
 
 
 @always_inline("nodebug")
-fn get_d(op: MpfrFloat) -> Float64:
+fn get_d[
+    in_rounding_mode: RoundingMode, //,
+    rounding_mode: RoundingMode = in_rounding_mode,
+](op: MpfrFloat[_, in_rounding_mode]) -> Float64:
+    alias MPFR_ROUNDING_MODE = get_mpfr_rounding_mode[rounding_mode]()
+
     return op._lib.call["mpfr_get_d", Float64](
-        op.as_immutable_ptr(), op._MPFR_ROUNDING_MODE
+        op.as_immutable_ptr(), MPFR_ROUNDING_MODE
     )
 
 
 @always_inline("nodebug")
-fn get_flt(op: MpfrFloat) -> Float32:
+fn get_flt[
+    in_rounding_mode: RoundingMode, //,
+    rounding_mode: RoundingMode = in_rounding_mode,
+](op: MpfrFloat[_, in_rounding_mode]) -> Float32:
+    alias MPFR_ROUNDING_MODE = get_mpfr_rounding_mode[rounding_mode]()
+
     return op._lib.call["mpfr_get_flt", Float32](
-        op.as_immutable_ptr(), op._MPFR_ROUNDING_MODE
+        op.as_immutable_ptr(), MPFR_ROUNDING_MODE
     )
