@@ -12,7 +12,7 @@ version = "0.1.0"
 format = "mojo format ."
 
 [dependencies]
-max = "==25.1.0.dev2025011405"
+max = "==25.2.0.dev2025021305"
 
 [feature.test.tasks]
 test = { cmd = "mojo test -I src -I utils test", env = { MPFR_LIBRARY_DIR = "$CONDA_PREFIX/lib" } }

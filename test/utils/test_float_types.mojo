@@ -29,7 +29,7 @@ fn test_float_types() raises:
         var type = FLOAT_TYPES[i]
         assert_true(
             type.is_floating_point(),
-            str(type) + " is not a floating-point type",
+            String(type, " is not a floating-point type"),
         )
 
 
@@ -45,5 +45,5 @@ fn test_half_float_types() raises:
         var type = HALF_FLOAT_TYPES[i]
         assert_true(
             type.is_half_float(),
-            str(type) + " is not a half-precision floating-point type",
+            String(type, " is not a half-precision floating-point type"),
         )

@@ -175,7 +175,7 @@ struct RoundingContext:
 
         if self._old_rounding_mode != self._new_rounding_mode:
             if not set_rounding_mode(self._new_rounding_mode):
-                raise "unable to set '" + str(self._new_rounding_mode) + "'"
+                raise String("unable to set '", self._new_rounding_mode, "'")
 
     @always_inline
     fn __exit__(self):

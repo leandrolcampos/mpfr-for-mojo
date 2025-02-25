@@ -40,7 +40,7 @@ fn test_version() raises:
 
     assert_true(
         version.major() == 4 and version.minor() == 2,
-        "The MPFR version should be 4.2.x; got " + str(version),
+        String("The MPFR version should be 4.2.x; got ", version),
     )
 
 
@@ -173,12 +173,12 @@ fn _test_get_value[rounding_mode: RoundingMode]() raises:
 
     @parameter
     for i in range(len(FLOAT_TYPES)):
-        alias ERROR_MESSAGE = (
-            "incorrect rounding for ('"
-            + str(rounding_mode)
-            + "', '"
-            + str(FLOAT_TYPES[i])
-            + "')"
+        alias ERROR_MESSAGE = String(
+            "incorrect rounding for ('",
+            rounding_mode,
+            "', '",
+            FLOAT_TYPES[i],
+            "')",
         )
 
         var singular_values = List[
@@ -244,12 +244,8 @@ fn _get_actual_values() -> List[Float32, hint_trivial_type=True]:
 
 
 fn _test_ulp_error[rounding_mode: RoundingMode]() raises:
-    alias ERROR_MESSAGE = (
-        "incorrect ULP error for ('"
-        + str(rounding_mode)
-        + "', '"
-        + str(DType.float32)
-        + "')"
+    alias ERROR_MESSAGE = String(
+        "incorrect ULP error for ('", rounding_mode, "', '", DType.float32, "')"
     )
 
     var expected_values = _get_expected_values()
@@ -315,12 +311,8 @@ fn _test_ulp_error[rounding_mode: RoundingMode]() raises:
 
 
 fn _test_ulp_error_with_aliasing[rounding_mode: RoundingMode]() raises:
-    alias ERROR_MESSAGE = (
-        "incorrect ULP error for ('"
-        + str(rounding_mode)
-        + "', '"
-        + str(DType.float32)
-        + "')"
+    alias ERROR_MESSAGE = String(
+        "incorrect ULP error for ('", rounding_mode, "', '", DType.float32, "')"
     )
 
     var expected_values = _get_expected_values()
