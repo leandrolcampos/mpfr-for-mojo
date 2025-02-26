@@ -42,45 +42,17 @@ fn ulp_error[
     alias EMIN = 1 - EMAX
     alias MIN_ULP_EXPONENT = EMIN - PREC + 1
 
-    var is_actual_inf = math.isinf(actual)
-    var is_actual_neg = FPUtils.get_sign(actual)
-
     if unlikely(math.isnan(actual)):
         if likely(expected.is_nan()):
             set_zero(output)
         else:
             set_inf(output)
 
-    elif unlikely(is_actual_inf and is_actual_neg):
-
-        @parameter
-        if rounding_mode not in [RoundingMode.TOWARD_ZERO, RoundingMode.UPWARD]:
-            if likely(expected < Scalar[type].MIN_FINITE):
-                set_zero(output)
-            else:
-                set_inf(output)
+    elif unlikely(math.isinf(actual)):
+        if likely(expected[] == actual):
+            set_zero(output)
         else:
-            if likely(expected.is_inf() and expected.get_sign() < 0):
-                set_zero(output)
-            else:
-                set_inf(output)
-
-    elif unlikely(is_actual_inf):  # and not is_actual_neg
-
-        @parameter
-        if rounding_mode not in [
-            RoundingMode.TOWARD_ZERO,
-            RoundingMode.DOWNWARD,
-        ]:
-            if likely(expected > Scalar[type].MAX_FINITE):
-                set_zero(output)
-            else:
-                set_inf(output)
-        else:
-            if likely(expected.is_inf() and expected.get_sign() > 0):
-                set_zero(output)
-            else:
-                set_inf(output)
+            set_inf(output)
 
     elif unlikely(not expected.is_number()):
         set_inf(output)
@@ -220,14 +192,24 @@ fn cmp_si_2exp(op1: MpfrFloat, op2: c_long, e: mpfr_exp_t) -> c_int:
 
 
 @always_inline("nodebug")
-fn get_d(op: MpfrFloat) -> Float64:
+fn get_d[
+    in_rounding_mode: RoundingMode, //,
+    rounding_mode: RoundingMode = in_rounding_mode,
+](op: MpfrFloat[_, in_rounding_mode]) -> Float64:
+    alias MPFR_ROUNDING_MODE = get_mpfr_rounding_mode[rounding_mode]()
+
     return op._lib.call["mpfr_get_d", Float64](
-        op.as_immutable_ptr(), op._MPFR_ROUNDING_MODE
+        op.as_immutable_ptr(), MPFR_ROUNDING_MODE
     )
 
 
 @always_inline("nodebug")
-fn get_flt(op: MpfrFloat) -> Float32:
+fn get_flt[
+    in_rounding_mode: RoundingMode, //,
+    rounding_mode: RoundingMode = in_rounding_mode,
+](op: MpfrFloat[_, in_rounding_mode]) -> Float32:
+    alias MPFR_ROUNDING_MODE = get_mpfr_rounding_mode[rounding_mode]()
+
     return op._lib.call["mpfr_get_flt", Float32](
-        op.as_immutable_ptr(), op._MPFR_ROUNDING_MODE
+        op.as_immutable_ptr(), MPFR_ROUNDING_MODE
     )

@@ -9,6 +9,33 @@ MPFR is an efficient C library for multiple-precision floating-point computation
 
 By comparing the outputs of our custom Mojo functions with MPFR, we can ensure our implementations are correctly rounded or, at least, as accurate as possible within the memory or latency requirements.
 
+With just a few lines of code, we can test the correctness of a numerical routine under all rounding modes required by the IEEE 754 standard:
+
+```mojo
+fn test_sqrt_bf16() raises:
+    alias ROUNDING_MODES = available_rounding_modes()
+
+    @parameter
+    for i in range(len(ROUNDING_MODES)):
+        alias ROUNDING_MODE = ROUNDING_MODES[i]
+
+        var sqrt_checker = UnaryOperatorChecker[
+            DType.bfloat16,
+            mpfr.sqrt,
+            math.sqrt,
+            rounding_mode=ROUNDING_MODE,
+            default_ulp_tolerance=0.5,
+        ]()
+
+        sqrt_checker.assert_special_values()
+        sqrt_checker.assert_negative_normals[count=101]()
+        sqrt_checker.assert_negative_subnormals[count=11]()
+        sqrt_checker.assert_positive_subnormals[count=101]()
+        sqrt_checker.assert_positive_normals[count=1_001]()
+```
+
+In the above example, we test the implementation of the `sqrt` function available in the Mojo standard library. We expect the specialization of this function for `bfloat16` is correctly rounded or, if not, that the approximation error is at most 0.5 ULP.
+
 ## Table of Contents
 
 - [Getting Started](#getting-started)
@@ -140,7 +167,7 @@ Below is our current roadmap, detailing completed tasks and upcoming improvement
 - [x] Add support for correctness testing under different rounding modes.
 - [x] Implement a pipeline that converts MPFR values to lower-precision floating-point types avoiding double rounding errors.
 - [x] Add a very simple math package just to demonstrate how we can test its functions.
-- [ ] Add a testing module with routines to compare outputs of math function implementations against MPFR, measuring error in ULP.
+- [x] Add a testing module with routines to compare outputs of math function implementations against MPFR, measuring error in ULP.
 - [ ] Add thread-safe routines for exhaustive tests (and, optionally, for checking known hard-to-round cases) to the testing module.
 - [ ] Add support for new platforms: `linux-aarch64` and `osx-arm64`.
 - [ ] Compile lessons learned and recommendations for math library developers in Mojo, as well as for Mojo language and standard library maintainers.

@@ -15,12 +15,12 @@
 # ===----------------------------------------------------------------------=== #
 
 from collections import InlineArray
+from collections.string import StringSlice
 from memory import UnsafePointer
 from os import getenv
 from pathlib import Path
 from sys import DLHandle, os_is_linux, os_is_macos
 from sys.ffi import _Global, c_char
-from utils import StringRef
 
 
 @value
@@ -32,7 +32,7 @@ struct MpfrVersion(Stringable, Writable):
     var _minor: Int
     var _patch: Int
 
-    fn __init__(out self, version: StringRef):
+    fn __init__(out self, version: String):
         """Initializes a `MpfrVersion` object from a string.
 
         The string is parsed to extract major, minor, and patch numbers. If
@@ -45,7 +45,7 @@ struct MpfrVersion(Stringable, Writable):
         var components = InlineArray[Int, 3](-1)
 
         try:
-            splits = String(version).split(".")
+            splits = version.split(".")
         except:
             splits = List[String]()
 
@@ -71,9 +71,7 @@ struct MpfrVersion(Stringable, Writable):
         Args:
             writer: The object to write to.
         """
-        writer.write(
-            str(self._major) + "." + str(self._minor) + "." + str(self._patch)
-        )
+        writer.write(self._major, ".", self._minor, ".", self._patch)
 
     @always_inline("nodebug")
     fn major(self) -> Int:
@@ -92,9 +90,13 @@ struct MpfrVersion(Stringable, Writable):
 
 
 @always_inline("nodebug")
-fn _get_mpfr_version(mpfr_handle: DLHandle) -> StringRef:
-    return StringRef(
-        ptr=mpfr_handle.call["mpfr_get_version", UnsafePointer[c_char]]()
+fn _get_mpfr_version(mpfr_handle: DLHandle) -> String:
+    return String(
+        StringSlice[StaticConstantOrigin](
+            unsafe_from_utf8_cstr_ptr=mpfr_handle.call[
+                "mpfr_get_version", UnsafePointer[c_char]
+            ]()
+        )
     )
 
 
@@ -118,7 +120,7 @@ struct MpfrLibrary:
         if len(file_dir) == 0:
             self = MpfrLibrary(file_name)
         else:
-            self = MpfrLibrary(str(Path(file_dir) / file_name))
+            self = MpfrLibrary(String(Path(file_dir) / file_name))
 
     fn __init__(out self, path: String):
         self._handle = DLHandle(path)

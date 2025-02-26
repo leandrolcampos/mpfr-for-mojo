@@ -152,10 +152,16 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn __eq__(self, other: Self) -> Bool:
+        if unlikely(self.is_nan() or other.is_nan()):
+            return False
+
         return cmp(self, other) == 0
 
     @always_inline("nodebug")
     fn __eq__(self, other: Scalar[type]) -> Bool:
+        if unlikely(self.is_nan() or math.isnan(other)):
+            return False
+
         @parameter
         if type is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) == 0
@@ -164,10 +170,16 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn __ne__(self, other: Self) -> Bool:
+        if unlikely(self.is_nan() or other.is_nan()):
+            return False
+
         return cmp(self, other) != 0
 
     @always_inline("nodebug")
     fn __ne__(self, other: Scalar[type]) -> Bool:
+        if unlikely(self.is_nan() or math.isnan(other)):
+            return False
+
         @parameter
         if type is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) != 0
@@ -176,10 +188,16 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn __lt__(self, other: Self) -> Bool:
+        if unlikely(self.is_nan() or other.is_nan()):
+            return False
+
         return cmp(self, other) < 0
 
     @always_inline("nodebug")
     fn __lt__(self, other: Scalar[type]) -> Bool:
+        if unlikely(self.is_nan() or math.isnan(other)):
+            return False
+
         @parameter
         if type is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) < 0
@@ -188,10 +206,16 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn __gt__(self, other: Self) -> Bool:
+        if unlikely(self.is_nan() or other.is_nan()):
+            return False
+
         return cmp(self, other) > 0
 
     @always_inline("nodebug")
     fn __gt__(self, other: Scalar[type]) -> Bool:
+        if unlikely(self.is_nan() or math.isnan(other)):
+            return False
+
         @parameter
         if type is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) > 0
@@ -200,10 +224,16 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn __le__(self, other: Self) -> Bool:
+        if unlikely(self.is_nan() or other.is_nan()):
+            return False
+
         return cmp(self, other) <= 0
 
     @always_inline("nodebug")
     fn __le__(self, other: Scalar[type]) -> Bool:
+        if unlikely(self.is_nan() or math.isnan(other)):
+            return False
+
         @parameter
         if type is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) <= 0
@@ -212,10 +242,16 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn __ge__(self, other: Self) -> Bool:
+        if unlikely(self.is_nan() or other.is_nan()):
+            return False
+
         return cmp(self, other) >= 0
 
     @always_inline("nodebug")
     fn __ge__(self, other: Scalar[type]) -> Bool:
+        if unlikely(self.is_nan() or math.isnan(other)):
+            return False
+
         @parameter
         if type is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) >= 0

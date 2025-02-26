@@ -40,7 +40,7 @@ fn test_version() raises:
 
     assert_true(
         version.major() == 4 and version.minor() == 2,
-        "The MPFR version should be 4.2.x; got " + str(version),
+        String("The MPFR version should be 4.2.x; got ", version),
     )
 
 
@@ -173,12 +173,12 @@ fn _test_get_value[rounding_mode: RoundingMode]() raises:
 
     @parameter
     for i in range(len(FLOAT_TYPES)):
-        alias ERROR_MESSAGE = (
-            "incorrect rounding for ('"
-            + str(rounding_mode)
-            + "', '"
-            + str(FLOAT_TYPES[i])
-            + "')"
+        alias ERROR_MESSAGE = String(
+            "incorrect rounding for ('",
+            rounding_mode,
+            "', '",
+            FLOAT_TYPES[i],
+            "')",
         )
 
         var singular_values = List[
@@ -228,6 +228,7 @@ fn _get_expected_values() -> List[Float64, hint_trivial_type=True]:
         math.ldexp(-1.0, FP32_EMAX + 1),  # -huge
         math.ldexp(+1.0, FP32_EMAX + 1),  # +huge
         1.0 + math.ldexp(1.0, -FP32_PREC),
+        0.0,
     )
 
 
@@ -243,12 +244,8 @@ fn _get_actual_values() -> List[Float32, hint_trivial_type=True]:
 
 
 fn _test_ulp_error[rounding_mode: RoundingMode]() raises:
-    alias ERROR_MESSAGE = (
-        "incorrect ULP error for ('"
-        + str(rounding_mode)
-        + "', '"
-        + str(DType.float32)
-        + "')"
+    alias ERROR_MESSAGE = String(
+        "incorrect ULP error for ('", rounding_mode, "', '", DType.float32, "')"
     )
 
     var expected_values = _get_expected_values()
@@ -297,17 +294,25 @@ fn _test_ulp_error[rounding_mode: RoundingMode]() raises:
                     assert_equal(output[], 8388608, ERROR_MESSAGE)
                 else:
                     assert_equal(output[], 8388607.5, ERROR_MESSAGE)
+            elif expected.is_zero():
+                # output = abs(0 - actual) / ulp(0)
+                # actual > 1
+                # ulp(0) = 2**(-126 - 24 + 1) < 2**(-(EMAX := 127))
+                @parameter
+                if rounding_mode in [
+                    RoundingMode.TOWARD_ZERO,
+                    RoundingMode.DOWNWARD,
+                ]:
+                    assert_equal(output[], Float32.MAX_FINITE, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], Float32.MAX, ERROR_MESSAGE)
             else:
                 assert_equal(output[], 0.5, ERROR_MESSAGE)
 
 
 fn _test_ulp_error_with_aliasing[rounding_mode: RoundingMode]() raises:
-    alias ERROR_MESSAGE = (
-        "incorrect ULP error for ('"
-        + str(rounding_mode)
-        + "', '"
-        + str(DType.float32)
-        + "')"
+    alias ERROR_MESSAGE = String(
+        "incorrect ULP error for ('", rounding_mode, "', '", DType.float32, "')"
     )
 
     var expected_values = _get_expected_values()
@@ -353,6 +358,18 @@ fn _test_ulp_error_with_aliasing[rounding_mode: RoundingMode]() raises:
                     assert_equal(output[], 8388608, ERROR_MESSAGE)
                 else:
                     assert_equal(output[], 8388607.5, ERROR_MESSAGE)
+            elif expected.is_zero():
+                # output = abs(0 - actual) / ulp(0)
+                # actual > 1
+                # ulp(0) = 2**(-126 - 24 + 1) < 2**(-(EMAX := 127))
+                @parameter
+                if rounding_mode in [
+                    RoundingMode.TOWARD_ZERO,
+                    RoundingMode.DOWNWARD,
+                ]:
+                    assert_equal(output[], Float32.MAX_FINITE, ERROR_MESSAGE)
+                else:
+                    assert_equal(output[], Float32.MAX, ERROR_MESSAGE)
             else:
                 assert_equal(output[], 0.5, ERROR_MESSAGE)
 
