@@ -206,7 +206,11 @@ fn _test_get_value[rounding_mode: RoundingMode]() raises:
             for j in range(len(regular_values)):
                 var value = regular_values[j]
                 _ = mpfr.set_d(a, value)
-                assert_equal(a[], Scalar[FLOAT_TYPES[i]](value), ERROR_MESSAGE)
+
+                var actual = a[]
+                var expected = Scalar[FLOAT_TYPES[i]](value)
+
+                assert_equal(actual, expected, ERROR_MESSAGE)
 
 
 fn test_get_value() raises:
