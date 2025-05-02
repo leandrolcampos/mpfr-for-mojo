@@ -42,30 +42,34 @@ alias UnaryOperator = fn[dtype: DType, width: Int] (SIMD[dtype, width]) -> SIMD[
 
 @register_passable("trivial")
 struct _MatchResult[dtype: DType](Boolable):
-    var _cr_expected: Scalar[dtype]
+    var _correctly_rounded: Scalar[dtype]
     var _actual: Scalar[dtype]
     var _ulp_error: Float64
     var _success: Bool
 
     @always_inline("nodebug")
-    fn __init__(out self, cr_expected: Scalar[dtype], actual: Scalar[dtype]):
-        self._cr_expected = cr_expected
+    fn __init__(
+        out self, correctly_rounded: Scalar[dtype], actual: Scalar[dtype]
+    ):
+        self._correctly_rounded = correctly_rounded
         self._actual = actual
         self._ulp_error = 0.0
-        self._success = cr_expected == actual
+        self._success = correctly_rounded == actual
 
     @always_inline("nodebug")
     fn set_ulp_error(mut self, ulp_error: Float64, is_tolerable: Bool):
         self._ulp_error = ulp_error
-        self._success = (self._cr_expected == self._actual) or is_tolerable
+        self._success = (
+            self._correctly_rounded == self._actual
+        ) or is_tolerable
 
     @always_inline("nodebug")
     fn __bool__(self) -> Bool:
         return self._success
 
     @always_inline("nodebug")
-    fn cr_expected(self) -> Scalar[dtype]:
-        return self._cr_expected
+    fn correctly_rounded(self) -> Scalar[dtype]:
+        return self._correctly_rounded
 
     @always_inline("nodebug")
     fn actual(self) -> Scalar[dtype]:
@@ -359,7 +363,7 @@ fn _assert_error[
         "\n  - Input:         ",
         hex(bitcast[UINT_DTYPE](x)),
         "\n  - Expected:      ",
-        match_result.cr_expected(),
+        match_result.correctly_rounded(),
         " (correctly rounded)",
         "\n  - Actual:        ",
         match_result.actual(),
