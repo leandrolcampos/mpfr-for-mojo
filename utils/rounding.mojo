@@ -116,17 +116,17 @@ fn set_rounding_mode(rounding_mode: RoundingMode) -> Bool:
 
 
 @always_inline
-fn quick_get_rounding_mode[type: DType = DType.float32]() -> RoundingMode:
-    alias ONE = Scalar[type](1.0)
-    alias PREC = FPUtils[type].mantissa_width() + 1
+fn quick_get_rounding_mode[dtype: DType = DType.float32]() -> RoundingMode:
+    alias ONE = Scalar[dtype](1.0)
+    alias PREC = FPUtils[dtype].mantissa_width() + 1
 
     @parameter
-    fn _get_eps() -> Scalar[type]:
+    fn _get_eps() -> Scalar[dtype]:
         @parameter
-        if type == DType.bfloat16:
+        if dtype == DType.bfloat16:
             # The `math.ldexp` operation cannot be executed in compile-time
             # for `DType.bfloat16`
-            return Scalar[type](0.0078125)
+            return Scalar[dtype](0.0078125)
 
         return math.ldexp(ONE, 1 - PREC)
 
@@ -137,9 +137,7 @@ fn quick_get_rounding_mode[type: DType = DType.float32]() -> RoundingMode:
     # The following line forces a volatile load of `EPSNEG`, ensuring that
     # its value is actually read each time and preventing the compiler from
     # optimizing away the subsequent floating-point operations.
-    var epsneg = UnsafePointer[Scalar[type]].address_of(EPSNEG).load[
-        volatile=True
-    ]()
+    var epsneg = UnsafePointer(to=EPSNEG).load[volatile=True]()
     var diff = (ONE_PLUS_EPS + epsneg) + (-1.0 - epsneg)
 
     if diff == 0.0:
