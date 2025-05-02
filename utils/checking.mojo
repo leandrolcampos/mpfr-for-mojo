@@ -30,25 +30,25 @@ from mpfr import MpfrFloat, MpfrFloatPtr
 from rounding import RoundingContext, RoundingMode
 
 
-alias UnaryMpfrOperator = fn[type: DType, rounding_mode: RoundingMode] (
-    MpfrFloatPtr[type, rounding_mode],
-    MpfrFloat[type, rounding_mode],
+alias UnaryMpfrOperator = fn[dtype: DType, rounding_mode: RoundingMode] (
+    MpfrFloatPtr[dtype, rounding_mode],
+    MpfrFloat[dtype, rounding_mode],
 ) -> c_int
 
-alias UnaryOperator = fn[type: DType, width: Int] (SIMD[type, width]) -> SIMD[
-    type, width
+alias UnaryOperator = fn[dtype: DType, width: Int] (SIMD[dtype, width]) -> SIMD[
+    dtype, width
 ]
 
 
 @register_passable("trivial")
-struct _MatchResult[type: DType](Boolable):
-    var _cr_expected: Scalar[type]
-    var _actual: Scalar[type]
+struct _MatchResult[dtype: DType](Boolable):
+    var _cr_expected: Scalar[dtype]
+    var _actual: Scalar[dtype]
     var _ulp_error: Float64
     var _success: Bool
 
     @always_inline("nodebug")
-    fn __init__(out self, cr_expected: Scalar[type], actual: Scalar[type]):
+    fn __init__(out self, cr_expected: Scalar[dtype], actual: Scalar[dtype]):
         self._cr_expected = cr_expected
         self._actual = actual
         self._ulp_error = 0.0
@@ -64,11 +64,11 @@ struct _MatchResult[type: DType](Boolable):
         return self._success
 
     @always_inline("nodebug")
-    fn cr_expected(self) -> Scalar[type]:
+    fn cr_expected(self) -> Scalar[dtype]:
         return self._cr_expected
 
     @always_inline("nodebug")
-    fn actual(self) -> Scalar[type]:
+    fn actual(self) -> Scalar[dtype]:
         return self._actual
 
     @always_inline("nodebug")
@@ -77,17 +77,17 @@ struct _MatchResult[type: DType](Boolable):
 
 
 struct UnaryOperatorChecker[
-    type: DType,
+    dtype: DType,
     oracle_fn: UnaryMpfrOperator,
     tested_fn: UnaryOperator,
     *,
     rounding_mode: RoundingMode = RoundingMode.TO_NEAREST,
     default_ulp_tolerance: Float64 = 1.0,
 ]:
-    alias MAX_FINITE = Scalar[type].MAX_FINITE
-    alias SMALLEST_NORMAL = _smallest_normal[type]()
-    alias SMALLEST_SUBNORMAL = _smallest_subnormal[type]()
-    alias UINT_TYPE = _unsigned_integral_type_of[type]()
+    alias MAX_FINITE = Scalar[dtype].MAX_FINITE
+    alias SMALLEST_NORMAL = _smallest_normal[dtype]()
+    alias SMALLEST_SUBNORMAL = _smallest_subnormal[dtype]()
+    alias UINT_DTYPE = _unsigned_integral_type_of[dtype]()
 
     var _rounding_context: RoundingContext
 
@@ -104,11 +104,11 @@ struct UnaryOperatorChecker[
     fn assert_match(
         self,
         /,
-        x: Scalar[type],
+        x: Scalar[dtype],
         *,
         ulp_tolerance: Float64 = default_ulp_tolerance,
     ) raises:
-        var mpfr_scratch = MpfrFloat[type, rounding_mode]()
+        var mpfr_scratch = MpfrFloat[dtype, rounding_mode]()
         var match_result = _match[oracle_fn, tested_fn](
             x, ulp_tolerance, mpfr_scratch
         )
@@ -125,11 +125,11 @@ struct UnaryOperatorChecker[
         *,
         ulp_tolerance: Float64 = default_ulp_tolerance,
     ) raises:
-        alias VALUES = List[Scalar[type], hint_trivial_type=True](
-            0.0, -0.0, math.inf[type](), -math.inf[type](), math.nan[type]()
+        alias VALUES = List[Scalar[dtype], hint_trivial_type=True](
+            0.0, -0.0, math.inf[dtype](), -math.inf[dtype](), math.nan[dtype]()
         )
 
-        var mpfr_scratch = MpfrFloat[type, rounding_mode]()
+        var mpfr_scratch = MpfrFloat[dtype, rounding_mode]()
 
         @parameter
         for i in range(len(VALUES)):
@@ -146,11 +146,11 @@ struct UnaryOperatorChecker[
 
     @always_inline
     fn _unsafe_assert_range[
-        start: Scalar[Self.UINT_TYPE],
-        stop: Scalar[Self.UINT_TYPE],
+        start: Scalar[Self.UINT_DTYPE],
+        stop: Scalar[Self.UINT_DTYPE],
         *,
         endpoint: Bool = True,
-        count: Scalar[Self.UINT_TYPE] = _range_length[start, stop, endpoint](),
+        count: Scalar[Self.UINT_DTYPE] = _range_length[start, stop, endpoint](),
     ](self, ulp_tolerance: Float64, location: _SourceLocation,) raises:
         alias RANGE_LENGTH = _range_length[start, stop, endpoint]()
 
@@ -172,10 +172,10 @@ struct UnaryOperatorChecker[
 
         @always_inline
         fn _assert(
-            value: Scalar[Self.UINT_TYPE],
-            mut mpfr_scratch: MpfrFloat[type, rounding_mode],
+            value: Scalar[Self.UINT_DTYPE],
+            mut mpfr_scratch: MpfrFloat[dtype, rounding_mode],
         ) raises:
-            var x = bitcast[type](value)
+            var x = bitcast[dtype](value)
 
             var match_result = _match[oracle_fn, tested_fn](
                 x, ulp_tolerance, mpfr_scratch
@@ -187,7 +187,7 @@ struct UnaryOperatorChecker[
                 )
 
         @always_inline
-        fn _next(current: Scalar[Self.UINT_TYPE]) -> Scalar[Self.UINT_TYPE]:
+        fn _next(current: Scalar[Self.UINT_DTYPE]) -> Scalar[Self.UINT_DTYPE]:
             @parameter
             if start < stop:
                 return current + STEP
@@ -195,7 +195,7 @@ struct UnaryOperatorChecker[
                 return current - STEP
 
         var current = start
-        var mpfr_scratch = MpfrFloat[type, rounding_mode]()
+        var mpfr_scratch = MpfrFloat[dtype, rounding_mode]()
 
         for _ in range(COUNT):
             _assert(current, mpfr_scratch)
@@ -207,19 +207,19 @@ struct UnaryOperatorChecker[
 
     @always_inline
     fn assert_range[
-        start: Scalar[type],
-        stop: Scalar[type],
+        start: Scalar[dtype],
+        stop: Scalar[dtype],
         *,
         endpoint: Bool = True,
-        count: Scalar[Self.UINT_TYPE] = _range_length[
-            bitcast[Self.UINT_TYPE](start),
-            bitcast[Self.UINT_TYPE](stop),
+        count: Scalar[Self.UINT_DTYPE] = _range_length[
+            bitcast[Self.UINT_DTYPE](start),
+            bitcast[Self.UINT_DTYPE](stop),
             endpoint,
         ](),
     ](self, *, ulp_tolerance: Float64 = default_ulp_tolerance) raises:
         self._unsafe_assert_range[
-            bitcast[Self.UINT_TYPE](start),
-            bitcast[Self.UINT_TYPE](stop),
+            bitcast[Self.UINT_DTYPE](start),
+            bitcast[Self.UINT_DTYPE](stop),
             endpoint=endpoint,
             count=count,
         ](ulp_tolerance, __call_location())
@@ -227,15 +227,15 @@ struct UnaryOperatorChecker[
     @always_inline
     fn assert_positive_normals[
         *,
-        count: Scalar[Self.UINT_TYPE] = _range_length[
-            bitcast[Self.UINT_TYPE](Self.SMALLEST_NORMAL),
-            bitcast[Self.UINT_TYPE](Self.MAX_FINITE),
+        count: Scalar[Self.UINT_DTYPE] = _range_length[
+            bitcast[Self.UINT_DTYPE](Self.SMALLEST_NORMAL),
+            bitcast[Self.UINT_DTYPE](Self.MAX_FINITE),
             True,
         ](),
     ](self, *, ulp_tolerance: Float64 = default_ulp_tolerance) raises:
         self._unsafe_assert_range[
-            bitcast[Self.UINT_TYPE](Self.SMALLEST_NORMAL),
-            bitcast[Self.UINT_TYPE](Self.MAX_FINITE),
+            bitcast[Self.UINT_DTYPE](Self.SMALLEST_NORMAL),
+            bitcast[Self.UINT_DTYPE](Self.MAX_FINITE),
             endpoint=True,
             count=count,
         ](ulp_tolerance, __call_location())
@@ -243,15 +243,15 @@ struct UnaryOperatorChecker[
     @always_inline
     fn assert_negative_normals[
         *,
-        count: Scalar[Self.UINT_TYPE] = _range_length[
-            bitcast[Self.UINT_TYPE](-Self.SMALLEST_NORMAL),
-            bitcast[Self.UINT_TYPE](-Self.MAX_FINITE),
+        count: Scalar[Self.UINT_DTYPE] = _range_length[
+            bitcast[Self.UINT_DTYPE](-Self.SMALLEST_NORMAL),
+            bitcast[Self.UINT_DTYPE](-Self.MAX_FINITE),
             True,
         ](),
     ](self, *, ulp_tolerance: Float64 = default_ulp_tolerance) raises:
         self._unsafe_assert_range[
-            bitcast[Self.UINT_TYPE](-Self.SMALLEST_NORMAL),
-            bitcast[Self.UINT_TYPE](-Self.MAX_FINITE),
+            bitcast[Self.UINT_DTYPE](-Self.SMALLEST_NORMAL),
+            bitcast[Self.UINT_DTYPE](-Self.MAX_FINITE),
             endpoint=True,
             count=count,
         ](ulp_tolerance, __call_location())
@@ -259,15 +259,15 @@ struct UnaryOperatorChecker[
     @always_inline
     fn assert_positive_subnormals[
         *,
-        count: Scalar[Self.UINT_TYPE] = _range_length[
-            bitcast[Self.UINT_TYPE](Self.SMALLEST_SUBNORMAL),
-            bitcast[Self.UINT_TYPE](Self.SMALLEST_NORMAL) - 1,
+        count: Scalar[Self.UINT_DTYPE] = _range_length[
+            bitcast[Self.UINT_DTYPE](Self.SMALLEST_SUBNORMAL),
+            bitcast[Self.UINT_DTYPE](Self.SMALLEST_NORMAL) - 1,
             True,
         ](),
     ](self, *, ulp_tolerance: Float64 = default_ulp_tolerance) raises:
         self._unsafe_assert_range[
-            bitcast[Self.UINT_TYPE](Self.SMALLEST_SUBNORMAL),
-            bitcast[Self.UINT_TYPE](Self.SMALLEST_NORMAL) - 1,
+            bitcast[Self.UINT_DTYPE](Self.SMALLEST_SUBNORMAL),
+            bitcast[Self.UINT_DTYPE](Self.SMALLEST_NORMAL) - 1,
             endpoint=True,
             count=count,
         ](ulp_tolerance, __call_location())
@@ -275,36 +275,36 @@ struct UnaryOperatorChecker[
     @always_inline
     fn assert_negative_subnormals[
         *,
-        count: Scalar[Self.UINT_TYPE] = _range_length[
-            bitcast[Self.UINT_TYPE](-Self.SMALLEST_SUBNORMAL),
-            bitcast[Self.UINT_TYPE](-Self.SMALLEST_NORMAL) - 1,
+        count: Scalar[Self.UINT_DTYPE] = _range_length[
+            bitcast[Self.UINT_DTYPE](-Self.SMALLEST_SUBNORMAL),
+            bitcast[Self.UINT_DTYPE](-Self.SMALLEST_NORMAL) - 1,
             True,
         ](),
     ](self, *, ulp_tolerance: Float64 = default_ulp_tolerance) raises:
         self._unsafe_assert_range[
-            bitcast[Self.UINT_TYPE](-Self.SMALLEST_SUBNORMAL),
-            bitcast[Self.UINT_TYPE](-Self.SMALLEST_NORMAL) - 1,
+            bitcast[Self.UINT_DTYPE](-Self.SMALLEST_SUBNORMAL),
+            bitcast[Self.UINT_DTYPE](-Self.SMALLEST_NORMAL) - 1,
             endpoint=True,
             count=count,
         ](ulp_tolerance, __call_location())
 
 
 @always_inline
-fn _smallest_subnormal[type: DType]() -> Scalar[type]:
-    return FPUtils[type].bitcast_from_integer(1)
+fn _smallest_subnormal[dtype: DType]() -> Scalar[dtype]:
+    return FPUtils[dtype].bitcast_from_integer(1)
 
 
 @always_inline
-fn _smallest_normal[type: DType]() -> Scalar[type]:
-    return FPUtils[type].bitcast_from_integer(
-        1 << FPUtils[type].mantissa_width()
+fn _smallest_normal[dtype: DType]() -> Scalar[dtype]:
+    return FPUtils[dtype].bitcast_from_integer(
+        1 << FPUtils[dtype].mantissa_width()
     )
 
 
 @always_inline
 fn _range_length[
-    type: DType, //, start: Scalar[type], stop: Scalar[type], endpoint: Bool
-]() -> Scalar[type]:
+    dtype: DType, //, start: Scalar[dtype], stop: Scalar[dtype], endpoint: Bool
+]() -> Scalar[dtype]:
     @parameter
     if start < stop:
         return stop - start + (1 if endpoint else 0)
@@ -314,15 +314,15 @@ fn _range_length[
 
 @always_inline
 fn _match[
-    type: DType,
+    dtype: DType,
     rounding_mode: RoundingMode, //,
     oracle_fn: UnaryMpfrOperator,
     tested_fn: UnaryOperator,
 ](
-    x: Scalar[type],
+    x: Scalar[dtype],
     ulp_tolerance: Float64,
-    mut mpfr_scratch: MpfrFloat[type, rounding_mode],
-) -> _MatchResult[type]:
+    mut mpfr_scratch: MpfrFloat[dtype, rounding_mode],
+) -> _MatchResult[dtype]:
     mpfr_scratch[] = x
     _ = oracle_fn(mpfr_scratch, mpfr_scratch)
 
@@ -338,26 +338,26 @@ fn _match[
 
 @always_inline
 fn _assert_error[
-    type: DType, //,
+    dtype: DType, //,
     rounding_mode: RoundingMode,
 ](
-    x: Scalar[type],
+    x: Scalar[dtype],
     ulp_tolerance: Float64,
-    match_result: _MatchResult[type],
+    match_result: _MatchResult[dtype],
     location: _SourceLocation,
 ) -> String:
-    alias UINT_TYPE = _unsigned_integral_type_of[type]()
-    alias TYPE_AS_STRING = String(type)
+    alias UINT_DTYPE = _unsigned_integral_type_of[dtype]()
+    alias DTYPE_AS_STRING = String(dtype)
     alias ROUNDING_MODE_AS_STRING = String(rounding_mode)
 
     var error_message = String(
         "AssertionError",
-        "\n  - Type:          ",
-        TYPE_AS_STRING,
+        "\n  - DType:         ",
+        DTYPE_AS_STRING,
         "\n  - Rounding mode: ",
         ROUNDING_MODE_AS_STRING,
         "\n  - Input:         ",
-        hex(bitcast[UINT_TYPE](x)),
+        hex(bitcast[UINT_DTYPE](x)),
         "\n  - Expected:      ",
         match_result.cr_expected(),
         " (correctly rounded)",
