@@ -127,7 +127,7 @@ struct MpfrLibrary:
             self._handle = DLHandle(path)
         except e:
             self._handle = abort[DLHandle](
-                String("Failed to load GNU MPFR library from", path, ":\n", e)
+                "Failed to load GNU MPFR library from ", path, ":\n", e
             )
 
     @always_inline("nodebug")
