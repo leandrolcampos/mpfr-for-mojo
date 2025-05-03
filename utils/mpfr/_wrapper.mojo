@@ -294,11 +294,11 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn as_immutable_ptr(ref [ImmutableAnyOrigin]self) -> mpfr_srcptr:
-        return Pointer.address_of(self._value)
+        return Pointer(to=self._value)
 
     @always_inline("nodebug")
     fn as_mutable_ptr(ref [MutableAnyOrigin]self) -> mpfr_ptr:
-        return Pointer.address_of(self._value)
+        return Pointer(to=self._value)
 
 
 @register_passable("trivial")

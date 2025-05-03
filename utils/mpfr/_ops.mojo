@@ -151,7 +151,7 @@ fn set_str(rop: MpfrFloatPtr, s: StringLiteral, base: c_int = 0) -> c_int:
 
 
 @always_inline("nodebug")
-fn set_str(rop: MpfrFloatPtr, s: String, base: c_int = 0) -> c_int:
+fn set_str(rop: MpfrFloatPtr, owned s: String, base: c_int = 0) -> c_int:
     return rop._lib.call["mpfr_set_str", c_int](
         rop.as_mutable(), s.unsafe_cstr_ptr(), base, rop._MPFR_ROUNDING_MODE
     )
