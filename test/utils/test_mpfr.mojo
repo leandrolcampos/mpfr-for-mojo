@@ -23,7 +23,7 @@ from utils.numerics import FPUtils
 
 import mpfr
 
-from float_types import available_half_float_types
+from float_dtypes import available_half_float_dtypes
 from mpfr import MpfrFloat
 from mpfr._library import MpfrLibrary
 from rounding import (
@@ -65,10 +65,10 @@ fn test_add() raises:
 
 
 fn _append_singular_values[
-    type: DType, //
-](mut values: List[Scalar[type], hint_trivial_type=True],):
-    alias NAN = math.nan[type]()
-    alias INF = math.inf[type]()
+    dtype: DType, //
+](mut values: List[Scalar[dtype], hint_trivial_type=True],):
+    alias NAN = math.nan[dtype]()
+    alias INF = math.inf[dtype]()
 
     values.append(NAN)
     values.append(INF)
@@ -78,11 +78,11 @@ fn _append_singular_values[
 
 
 fn _append_boundary_values[
-    type: DType
+    dtype: DType
 ](mut values: List[Float64, hint_trivial_type=True]):
     alias INF = math.inf[DType.float64]()
-    alias PREC = FPUtils[type].mantissa_width() + 1
-    alias EMAX = FPUtils[type].max_exponent() - 1
+    alias PREC = FPUtils[dtype].mantissa_width() + 1
+    alias EMAX = FPUtils[dtype].max_exponent() - 1
     alias EMIN_NORMAL = 1 - EMAX
     alias EPSILON = math.ldexp(1.0, -PREC + 1)
     alias EPSILON_NEG = math.ldexp(1.0, -PREC)
@@ -107,14 +107,12 @@ fn _append_boundary_values[
         values.append(-value)
 
 
-fn _get_intermediate_values[
-    type: DType, //
-](lower_bound: Scalar[type], upper_bound: Scalar[type]) -> InlineArray[
-    Float64, 4
-]:
+fn _get_intermediate_values(
+    lower_bound: Scalar, upper_bound: __type_of(lower_bound)
+) -> InlineArray[Float64, 4]:
     var base_value = lower_bound.cast[DType.float64]()
     var delta = 0.25 * (upper_bound.cast[DType.float64]() - base_value)
-    var result = InlineArray[Float64, 4](unsafe_uninitialized=True)
+    var result = InlineArray[Float64, 4](uninitialized=True)
 
     @parameter
     for i in range(result.size):
@@ -124,10 +122,10 @@ fn _get_intermediate_values[
 
 
 fn _append_in_range_values[
-    type: DType
+    dtype: DType
 ](mut values: List[Float64, hint_trivial_type=True]):
-    alias ONE = Scalar[type](1.0)
-    alias EMAX = FPUtils[type].max_exponent() - 1
+    alias ONE = Scalar[dtype](1.0)
+    alias EMAX = FPUtils[dtype].max_exponent() - 1
     alias EMIN_NORMAL = 1 - EMAX
 
     # The `math.ldexp` operation cannot be executed in compile-time
@@ -136,19 +134,19 @@ fn _append_in_range_values[
 
     # The `math.nextafter` operation cannot be executed for `DType.bfloat16`
     # and `DType.float16`
-    fn _next_after[*, upward: Bool](value: Scalar[type]) -> Scalar[type]:
+    fn _next_after[*, upward: Bool](value: Scalar[dtype]) -> Scalar[dtype]:
         # This function assumes that `value` is a regular(, non-zero) value
-        var as_int = FPUtils[type].bitcast_to_integer(value)
+        var as_int = FPUtils[dtype].bitcast_to_integer(value)
         var inc = 1 if value >= 0.0 else -1
 
         @parameter
         if upward:
-            return FPUtils[type].bitcast_from_integer(as_int + inc)
+            return FPUtils[dtype].bitcast_from_integer(as_int + inc)
 
-        return FPUtils[type].bitcast_from_integer(as_int - inc)
+        return FPUtils[dtype].bitcast_from_integer(as_int - inc)
 
-    var lower_bounds = List[Scalar[type], hint_trivial_type=True](
-        -Scalar[type].MAX_FINITE,
+    var lower_bounds = List[Scalar[dtype], hint_trivial_type=True](
+        -Scalar[dtype].MAX_FINITE,
         -_next_after[upward=True](ONE),
         -ONE,
         -_next_after[upward=True](smallest_normal),
@@ -169,31 +167,31 @@ fn _append_in_range_values[
 
 
 fn _test_get_value[rounding_mode: RoundingMode]() raises:
-    alias FLOAT_TYPES = available_half_float_types()
+    alias FLOAT_DTYPES = available_half_float_dtypes()
 
     @parameter
-    for i in range(len(FLOAT_TYPES)):
+    for i in range(len(FLOAT_DTYPES)):
         alias ERROR_MESSAGE = String(
             "incorrect rounding for ('",
             rounding_mode,
             "', '",
-            FLOAT_TYPES[i],
+            FLOAT_DTYPES[i],
             "')",
         )
 
         var singular_values = List[
-            Scalar[FLOAT_TYPES[i]], hint_trivial_type=True
+            Scalar[FLOAT_DTYPES[i]], hint_trivial_type=True
         ]()
         _append_singular_values(singular_values)
 
         var regular_values = List[Float64, hint_trivial_type=True]()
-        _append_boundary_values[FLOAT_TYPES[i]](regular_values)
-        _append_in_range_values[FLOAT_TYPES[i]](regular_values)
+        _append_boundary_values[FLOAT_DTYPES[i]](regular_values)
+        _append_in_range_values[FLOAT_DTYPES[i]](regular_values)
 
-        var a = MpfrFloat[FLOAT_TYPES[i], rounding_mode]()
+        var a = MpfrFloat[FLOAT_DTYPES[i], rounding_mode]()
 
         with RoundingContext(rounding_mode):
-            if rounding_mode != quick_get_rounding_mode[FLOAT_TYPES[i]]():
+            if rounding_mode != quick_get_rounding_mode[FLOAT_DTYPES[i]]():
                 # It means that the active rounding mode is not supported
                 # by `FLOAT_TYPES[i]` in the current target
                 continue
@@ -206,7 +204,11 @@ fn _test_get_value[rounding_mode: RoundingMode]() raises:
             for j in range(len(regular_values)):
                 var value = regular_values[j]
                 _ = mpfr.set_d(a, value)
-                assert_equal(a[], Scalar[FLOAT_TYPES[i]](value), ERROR_MESSAGE)
+
+                var actual = a[]
+                var expected = Scalar[FLOAT_DTYPES[i]](value)
+
+                assert_equal(actual, expected, ERROR_MESSAGE)
 
 
 fn test_get_value() raises:

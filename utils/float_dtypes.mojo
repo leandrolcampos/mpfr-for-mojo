@@ -18,7 +18,7 @@ from sys import has_neon
 
 
 @always_inline("nodebug")
-fn available_float_types() -> List[DType, hint_trivial_type=True]:
+fn available_float_dtypes() -> List[DType, hint_trivial_type=True]:
     var result = List[DType, hint_trivial_type=True](
         DType.float16,
         DType.float32,
@@ -33,12 +33,12 @@ fn available_float_types() -> List[DType, hint_trivial_type=True]:
 
 
 @always_inline("nodebug")
-fn available_half_float_types() -> List[DType, hint_trivial_type=True]:
+fn available_half_float_dtypes() -> List[DType, hint_trivial_type=True]:
     var result = List[DType, hint_trivial_type=True]()
-    var float_types = available_float_types()
+    var float_dtypes = available_float_dtypes()
 
-    for i in range(len(float_types)):
-        if float_types[i].is_half_float():
-            result.append(float_types[i])
+    for i in range(len(float_dtypes)):
+        if float_dtypes[i].is_half_float():
+            result.append(float_dtypes[i])
 
     return result

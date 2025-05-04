@@ -63,29 +63,29 @@ fn get_mpfr_rounding_mode[mode: RoundingMode]() -> mpfr_rnd_t:
         return mpfr_rnd_t(MPFR_RNDU)
 
 
-fn _get_mpfr_precision[type: DType]() -> mpfr_prec_t:
+fn _get_mpfr_precision[dtype: DType]() -> mpfr_prec_t:
     @parameter
-    if type is DType.float64:
+    if dtype is DType.float64:
         return 256
     else:
         return 128
 
 
-fn _mpfr_float_construction_checks[type: DType]():
+fn _mpfr_float_construction_checks[dtype: DType]():
     constrained[
-        type.is_floating_point(), "type must be a floating-point type"
+        dtype.is_floating_point(), "dtype must be a floating-point data type"
     ]()
     constrained[
-        type in [DType.bfloat16, DType.float16, DType.float32, DType.float64],
-        "unsupported floating-point type",
+        dtype in [DType.bfloat16, DType.float16, DType.float32, DType.float64],
+        "unsupported floating-point data type",
     ]()
 
 
 struct MpfrFloat[
-    type: DType,
+    dtype: DType,
     rounding_mode: RoundingMode = RoundingMode.TO_NEAREST,
 ](Defaultable, ExplicitlyCopyable):
-    alias _MPFR_PRECISION = _get_mpfr_precision[type]()
+    alias _MPFR_PRECISION = _get_mpfr_precision[dtype]()
     alias _MPFR_ROUNDING_MODE = get_mpfr_rounding_mode[rounding_mode]()
 
     var _lib: MpfrLibrary
@@ -93,7 +93,7 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn __init__(out self):
-        _mpfr_float_construction_checks[type]()
+        _mpfr_float_construction_checks[dtype]()
 
         self._lib = MpfrLibraryProvider.get_or_create_ptr()[].library()
         self._value = mpfr_t()
@@ -103,7 +103,7 @@ struct MpfrFloat[
         )
 
     @always_inline("nodebug")
-    fn __init__(out self, value: Scalar[type]):
+    fn __init__(out self, value: Scalar[dtype]):
         self = Self()
         self[] = value
 
@@ -131,24 +131,24 @@ struct MpfrFloat[
         )
 
     @always_inline("nodebug")
-    fn __setitem__(mut self, value: Scalar[type]):
+    fn __setitem__(mut self, value: Scalar[dtype]):
         @parameter
-        if type is DType.float64:
+        if dtype is DType.float64:
             _ = set_d(self, rebind[Scalar[DType.float64]](value))
-        elif type is DType.float32:
+        elif dtype is DType.float32:
             _ = set_flt(self, rebind[Scalar[DType.float32]](value))
         else:
             _ = set_flt(self, value.cast[DType.float32]())
 
     @always_inline
-    fn __getitem__(self) -> Scalar[type]:
+    fn __getitem__(self) -> Scalar[dtype]:
         @parameter
-        if type is DType.float64:
-            return rebind[Scalar[type]](get_d(self))
-        elif type is DType.float32:
-            return rebind[Scalar[type]](get_flt(self))
+        if dtype is DType.float64:
+            return rebind[Scalar[dtype]](get_d(self))
+        elif dtype is DType.float32:
+            return rebind[Scalar[dtype]](get_flt(self))
         else:
-            return _get_value(self).cast[type]()
+            return _get_value(self).cast[dtype]()
 
     @always_inline("nodebug")
     fn __eq__(self, other: Self) -> Bool:
@@ -158,12 +158,12 @@ struct MpfrFloat[
         return cmp(self, other) == 0
 
     @always_inline("nodebug")
-    fn __eq__(self, other: Scalar[type]) -> Bool:
+    fn __eq__(self, other: Scalar[dtype]) -> Bool:
         if unlikely(self.is_nan() or math.isnan(other)):
             return False
 
         @parameter
-        if type is DType.float64:
+        if dtype is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) == 0
         else:
             return cmp_d(self, other.cast[DType.float64]()) == 0
@@ -176,12 +176,12 @@ struct MpfrFloat[
         return cmp(self, other) != 0
 
     @always_inline("nodebug")
-    fn __ne__(self, other: Scalar[type]) -> Bool:
+    fn __ne__(self, other: Scalar[dtype]) -> Bool:
         if unlikely(self.is_nan() or math.isnan(other)):
             return False
 
         @parameter
-        if type is DType.float64:
+        if dtype is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) != 0
         else:
             return cmp_d(self, other.cast[DType.float64]()) != 0
@@ -194,12 +194,12 @@ struct MpfrFloat[
         return cmp(self, other) < 0
 
     @always_inline("nodebug")
-    fn __lt__(self, other: Scalar[type]) -> Bool:
+    fn __lt__(self, other: Scalar[dtype]) -> Bool:
         if unlikely(self.is_nan() or math.isnan(other)):
             return False
 
         @parameter
-        if type is DType.float64:
+        if dtype is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) < 0
         else:
             return cmp_d(self, other.cast[DType.float64]()) < 0
@@ -212,12 +212,12 @@ struct MpfrFloat[
         return cmp(self, other) > 0
 
     @always_inline("nodebug")
-    fn __gt__(self, other: Scalar[type]) -> Bool:
+    fn __gt__(self, other: Scalar[dtype]) -> Bool:
         if unlikely(self.is_nan() or math.isnan(other)):
             return False
 
         @parameter
-        if type is DType.float64:
+        if dtype is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) > 0
         else:
             return cmp_d(self, other.cast[DType.float64]()) > 0
@@ -230,12 +230,12 @@ struct MpfrFloat[
         return cmp(self, other) <= 0
 
     @always_inline("nodebug")
-    fn __le__(self, other: Scalar[type]) -> Bool:
+    fn __le__(self, other: Scalar[dtype]) -> Bool:
         if unlikely(self.is_nan() or math.isnan(other)):
             return False
 
         @parameter
-        if type is DType.float64:
+        if dtype is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) <= 0
         else:
             return cmp_d(self, other.cast[DType.float64]()) <= 0
@@ -248,12 +248,12 @@ struct MpfrFloat[
         return cmp(self, other) >= 0
 
     @always_inline("nodebug")
-    fn __ge__(self, other: Scalar[type]) -> Bool:
+    fn __ge__(self, other: Scalar[dtype]) -> Bool:
         if unlikely(self.is_nan() or math.isnan(other)):
             return False
 
         @parameter
-        if type is DType.float64:
+        if dtype is DType.float64:
             return cmp_d(self, rebind[Scalar[DType.float64]](other)) >= 0
         else:
             return cmp_d(self, other.cast[DType.float64]()) >= 0
@@ -294,15 +294,15 @@ struct MpfrFloat[
 
     @always_inline("nodebug")
     fn as_immutable_ptr(ref [ImmutableAnyOrigin]self) -> mpfr_srcptr:
-        return Pointer.address_of(self._value)
+        return Pointer(to=self._value)
 
     @always_inline("nodebug")
     fn as_mutable_ptr(ref [MutableAnyOrigin]self) -> mpfr_ptr:
-        return Pointer.address_of(self._value)
+        return Pointer(to=self._value)
 
 
 @register_passable("trivial")
-struct MpfrFloatPtr[type: DType, rounding_mode: RoundingMode]:
+struct MpfrFloatPtr[dtype: DType, rounding_mode: RoundingMode]:
     """Represents a pointer to an MPFR value.
 
     This type is used for passing a pointer to an MPFR value into functions
@@ -315,7 +315,7 @@ struct MpfrFloatPtr[type: DType, rounding_mode: RoundingMode]:
     will be implicitly converted to a `MpfrFloatPtr` object.
     """
 
-    alias _MPFR_PRECISION = _get_mpfr_precision[type]()
+    alias _MPFR_PRECISION = _get_mpfr_precision[dtype]()
     alias _MPFR_ROUNDING_MODE = get_mpfr_rounding_mode[rounding_mode]()
 
     var _lib: MpfrLibrary
@@ -324,7 +324,7 @@ struct MpfrFloatPtr[type: DType, rounding_mode: RoundingMode]:
 
     @implicit
     @always_inline("nodebug")
-    fn __init__(out self, mut src: MpfrFloat[type, rounding_mode]):
+    fn __init__(out self, mut src: MpfrFloat[dtype, rounding_mode]):
         self._lib = src._lib
         self._as_immutable = src.as_immutable_ptr()
         self._as_mutable = src.as_mutable_ptr()
@@ -347,8 +347,8 @@ fn _eval[T: AnyType, //, val: T]() -> T:
 fn _get_value(src: MpfrFloat) -> Float32:
     alias INF = math.inf[DType.float32]()
     alias ONE = Scalar[DType.float32](1.0)
-    alias PREC = FPUtils[src.type].mantissa_width() + 1
-    alias EMAX = FPUtils[src.type].max_exponent() - 1
+    alias PREC = FPUtils[src.dtype].mantissa_width() + 1
+    alias EMAX = FPUtils[src.dtype].max_exponent() - 1
     alias EMIN_NORMAL = 1 - EMAX
     alias EMIN_SUBNORMAL = EMIN_NORMAL + 1 - PREC
     alias EPSILON = math.ldexp(ONE, -PREC + 1)

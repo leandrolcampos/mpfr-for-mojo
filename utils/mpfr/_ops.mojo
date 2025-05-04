@@ -31,14 +31,14 @@ from rounding import RoundingMode
 
 
 fn ulp_error[
-    type: DType, rounding_mode: RoundingMode, //
+    dtype: DType, rounding_mode: RoundingMode, //
 ](
-    output: MpfrFloatPtr[type, rounding_mode],
-    expected: MpfrFloat[type, rounding_mode],
-    actual: Scalar[type],
+    output: MpfrFloatPtr[dtype, rounding_mode],
+    expected: MpfrFloat[dtype, rounding_mode],
+    actual: Scalar[dtype],
 ):
-    alias PREC = FPUtils[type].mantissa_width() + 1
-    alias EMAX = FPUtils[type].max_exponent() - 1
+    alias PREC = FPUtils[dtype].mantissa_width() + 1
+    alias EMAX = FPUtils[dtype].max_exponent() - 1
     alias EMIN = 1 - EMAX
     alias MIN_ULP_EXPONENT = EMIN - PREC + 1
 
@@ -88,10 +88,10 @@ fn ulp_error[
 
 @always_inline("nodebug")
 fn add[
-    type: DType, rounding_mode: RoundingMode, //
+    dtype: DType, rounding_mode: RoundingMode, //
 ](
-    rop: MpfrFloatPtr[type, rounding_mode],
-    op1: MpfrFloat[type, rounding_mode],
+    rop: MpfrFloatPtr[dtype, rounding_mode],
+    op1: MpfrFloat[dtype, rounding_mode],
     op2: __type_of(op1),
 ) -> c_int:
     return rop._lib.call["mpfr_add", c_int](
@@ -104,10 +104,10 @@ fn add[
 
 @always_inline("nodebug")
 fn sqrt[
-    type: DType, rounding_mode: RoundingMode, //
+    dtype: DType, rounding_mode: RoundingMode, //
 ](
-    rop: MpfrFloatPtr[type, rounding_mode],
-    op: MpfrFloat[type, rounding_mode],
+    rop: MpfrFloatPtr[dtype, rounding_mode],
+    op: MpfrFloat[dtype, rounding_mode],
 ) -> c_int:
     return rop._lib.call["mpfr_sqrt", c_int](
         rop.as_mutable(), op.as_immutable_ptr(), op._MPFR_ROUNDING_MODE
@@ -151,7 +151,7 @@ fn set_str(rop: MpfrFloatPtr, s: StringLiteral, base: c_int = 0) -> c_int:
 
 
 @always_inline("nodebug")
-fn set_str(rop: MpfrFloatPtr, s: String, base: c_int = 0) -> c_int:
+fn set_str(rop: MpfrFloatPtr, owned s: String, base: c_int = 0) -> c_int:
     return rop._lib.call["mpfr_set_str", c_int](
         rop.as_mutable(), s.unsafe_cstr_ptr(), base, rop._MPFR_ROUNDING_MODE
     )

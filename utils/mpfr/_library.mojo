@@ -17,7 +17,7 @@
 from collections import InlineArray
 from collections.string import StringSlice
 from memory import UnsafePointer
-from os import getenv
+from os import abort, getenv
 from pathlib import Path
 from sys import DLHandle, os_is_linux, os_is_macos
 from sys.ffi import _Global, c_char
@@ -93,7 +93,7 @@ struct MpfrVersion(Stringable, Writable):
 fn _get_mpfr_version(mpfr_handle: DLHandle) -> String:
     return String(
         StringSlice[StaticConstantOrigin](
-            unsafe_from_utf8_cstr_ptr=mpfr_handle.call[
+            unsafe_from_utf8_ptr=mpfr_handle.call[
                 "mpfr_get_version", UnsafePointer[c_char]
             ]()
         )
@@ -123,7 +123,12 @@ struct MpfrLibrary:
             self = MpfrLibrary(String(Path(file_dir) / file_name))
 
     fn __init__(out self, path: String):
-        self._handle = DLHandle(path)
+        try:
+            self._handle = DLHandle(path)
+        except e:
+            self._handle = abort[DLHandle](
+                "Failed to load GNU MPFR library from ", path, ":\n", e
+            )
 
     @always_inline("nodebug")
     fn call[
