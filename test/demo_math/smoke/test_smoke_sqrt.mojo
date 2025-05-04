@@ -19,13 +19,13 @@ import math
 from testing import assert_equal
 
 from demo_math import sqrt
-from float_types import available_float_types
+from float_dtypes import available_float_dtypes
 
 
-fn _test_simple_cases[type: DType]() raises:
-    alias InType = Scalar[type]
-    alias INF = math.inf[type]()
-    alias NAN = math.nan[type]()
+fn _test_simple_cases[dtype: DType]() raises:
+    alias InType = Scalar[dtype]
+    alias INF = math.inf[dtype]()
+    alias NAN = math.nan[dtype]()
 
     assert_equal(sqrt(NAN), NAN)
     assert_equal(sqrt(-INF), NAN)
@@ -39,8 +39,8 @@ fn _test_simple_cases[type: DType]() raises:
 
 
 fn test_simple_cases() raises:
-    alias FLOAT_TYPES = available_float_types()
+    alias FLOAT_DTYPES = available_float_dtypes()
 
     @parameter
-    for i in range(len(FLOAT_TYPES)):
-        _test_simple_cases[FLOAT_TYPES[i]]()
+    for i in range(len(FLOAT_DTYPES)):
+        _test_simple_cases[FLOAT_DTYPES[i]]()

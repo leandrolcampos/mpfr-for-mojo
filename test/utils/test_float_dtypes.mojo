@@ -16,34 +16,34 @@
 
 from testing import assert_true
 
-from float_types import available_float_types, available_half_float_types
+from float_dtypes import available_float_dtypes, available_half_float_dtypes
 
 
-fn test_float_types() raises:
-    alias FLOAT_TYPES = available_float_types()
+fn test_float_dtypes() raises:
+    alias FLOAT_DTYPES = available_float_dtypes()
 
-    var num_types = len(FLOAT_TYPES)
-    assert_true(num_types > 0, "no floating-point types available")
+    var num_dtypes = len(FLOAT_DTYPES)
+    assert_true(num_dtypes > 0, "no floating-point data types available")
 
-    for i in range(num_types):
-        var type = FLOAT_TYPES[i]
+    for i in range(num_dtypes):
+        var dtype = FLOAT_DTYPES[i]
         assert_true(
-            type.is_floating_point(),
-            String(type, " is not a floating-point type"),
+            dtype.is_floating_point(),
+            String(dtype, " is not a floating-point data type"),
         )
 
 
-fn test_half_float_types() raises:
-    alias HALF_FLOAT_TYPES = available_half_float_types()
+fn test_half_float_dtypes() raises:
+    alias HALF_FLOAT_DTYPES = available_half_float_dtypes()
 
-    var num_types = len(HALF_FLOAT_TYPES)
+    var num_dtypes = len(HALF_FLOAT_DTYPES)
     assert_true(
-        num_types > 0, "no half-precision floating-point types available"
+        num_dtypes > 0, "no half-precision floating-point data types available"
     )
 
-    for i in range(num_types):
-        var type = HALF_FLOAT_TYPES[i]
+    for i in range(num_dtypes):
+        var dtype = HALF_FLOAT_DTYPES[i]
         assert_true(
-            type.is_half_float(),
-            String(type, " is not a half-precision floating-point type"),
+            dtype.is_half_float(),
+            String(dtype, " is not a half-precision floating-point data type"),
         )
