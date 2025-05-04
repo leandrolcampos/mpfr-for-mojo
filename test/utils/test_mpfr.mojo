@@ -112,7 +112,7 @@ fn _get_intermediate_values(
 ) -> InlineArray[Float64, 4]:
     var base_value = lower_bound.cast[DType.float64]()
     var delta = 0.25 * (upper_bound.cast[DType.float64]() - base_value)
-    var result = InlineArray[Float64, 4](unsafe_uninitialized=True)
+    var result = InlineArray[Float64, 4](uninitialized=True)
 
     @parameter
     for i in range(result.size):
